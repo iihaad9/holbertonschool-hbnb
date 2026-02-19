@@ -36,6 +36,7 @@ class PlaceList(Resource):
             return {"error": err}, 400
         return place.to_dict(), 201
 
+
 @api.route('/<place_id>')
 class PlaceResource(Resource):
     def get(self, place_id):
@@ -63,3 +64,29 @@ class PlaceResource(Resource):
             return {"error": "Place not found"}, 404
         facade.delete_place(place_id)
         return "", 204
+
+
+# ================================
+#   Reviews for a specific place
+# ================================
+@api.route('/<place_id>/reviews')
+class PlaceReviewList(Resource):
+    @api.response(200, 'List of reviews for the place retrieved successfully')
+    @api.response(404, 'Place not found')
+    def get(self, place_id):
+        """Get all reviews for a specific place"""
+        
+        place = facade.get_place(place_id)
+        if not place:
+            return {"error": "Place not found"}, 404
+
+        
+        
+        reviews = facade.get_all_reviews()
+        place_reviews = [
+            r.to_dict()
+            for r in reviews
+            if getattr(r, "place_id", None) == place_id
+        ]
+
+        return place_reviews, 200

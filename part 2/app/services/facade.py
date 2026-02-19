@@ -1,19 +1,26 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
-from app.models.place import Place   # ⬅️ أضفنا هذا
+from app.models.place import Place
+from app.models.review import Review  
+
 
 class Facade:
     def __init__(self):
-        # Users Repo
+        # -------- USERS REPO --------
         self.user_repo = InMemoryRepository()
         User.set_repository(self.user_repo)
 
-        # Places Repo ⬅️ أضفنا هذا
+        # -------- PLACES REPO --------
         self.place_repo = InMemoryRepository()
         Place.set_repository(self.place_repo)
 
-    # -------- USERS --------
+        # -------- REVIEWS REPO -------- ⬅
+        self.review_repo = InMemoryRepository()
+        Review.set_repository(self.review_repo)
 
+    # ================================
+    #             USERS
+    # ================================
     def create_user(self, data):
         return User.create(
             data["first_name"],
@@ -39,8 +46,9 @@ class Facade:
     def delete_user(self, user_id):
         return User.delete(user_id)
 
-    # -------- PLACES --------
-
+    # ================================
+    #             PLACES
+    # ================================
     def create_place(self, data):
         owner_id = data.get("owner_id")
         owner = self.get_user(owner_id)
@@ -83,6 +91,45 @@ class Facade:
 
     def delete_place(self, place_id):
         return Place.delete(place_id)
+
+    # ================================
+    #             REVIEWS
+    # ================================
+    def create_review(self, data):
+        """
+        نتوقع data فيها:
+        {
+            "rating": int,
+            "comment": str
+        }
+        
+        """
+        rating = data.get("rating")
+        comment = data.get("comment")
+
+        review = Review.create(rating, comment)
+        return review
+
+    def get_review(self, review_id):
+        return Review.get(review_id)
+
+    def get_all_reviews(self):
+        return Review.get_all()
+
+    def update_review(self, review_id, data):
+        """
+        
+        data 
+        {
+            "rating": 5,
+            "comment": "مراجعة محدثة"
+        }
+        """
+        Review.update(review_id, data)
+        return Review.get(review_id)
+
+    def delete_review(self, review_id):
+        return Review.delete(review_id)
 
 
 facade = Facade()
