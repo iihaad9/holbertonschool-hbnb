@@ -76,3 +76,13 @@ Expected:
 Delete Place (204)
 Expected:
 - Status code 204
+---
+
+### Amenities
+
+Create Amenity (201)
+POST /api/v1/amenities/
+```json
+{
+  "name": "WiFi"
+}
