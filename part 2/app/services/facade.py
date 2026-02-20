@@ -1,7 +1,8 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from app.models.place import Place
-from app.models.review import Review  
+from app.models.review import Review
+from app.models.amenity import Amenity
 
 
 class Facade:
@@ -14,9 +15,13 @@ class Facade:
         self.place_repo = InMemoryRepository()
         Place.set_repository(self.place_repo)
 
-        # -------- REVIEWS REPO -------- ⬅
+        # -------- REVIEWS REPO --------
         self.review_repo = InMemoryRepository()
         Review.set_repository(self.review_repo)
+
+        # -------- AMENITIES REPO --------
+        self.amenity_repo = InMemoryRepository()
+        Amenity.set_repository(self.amenity_repo)
 
     # ================================
     #             USERS
@@ -96,19 +101,9 @@ class Facade:
     #             REVIEWS
     # ================================
     def create_review(self, data):
-        """
-        نتوقع data فيها:
-        {
-            "rating": int,
-            "comment": str
-        }
-        
-        """
         rating = data.get("rating")
         comment = data.get("comment")
-
-        review = Review.create(rating, comment)
-        return review
+        return Review.create(rating, comment)
 
     def get_review(self, review_id):
         return Review.get(review_id)
@@ -117,19 +112,29 @@ class Facade:
         return Review.get_all()
 
     def update_review(self, review_id, data):
-        """
-        
-        data 
-        {
-            "rating": 5,
-            "comment": "مراجعة محدثة"
-        }
-        """
         Review.update(review_id, data)
         return Review.get(review_id)
 
     def delete_review(self, review_id):
         return Review.delete(review_id)
+
+    # ================================
+    #            AMENITIES
+    # ================================
+    def create_amenity(self, data):
+        name = data.get("name")
+        description = data.get("description")
+        return Amenity.create(name=name, description=description)
+
+    def get_amenity(self, amenity_id):
+        return Amenity.get(amenity_id)
+
+    def get_all_amenities(self):
+        return Amenity.get_all()
+
+    def update_amenity(self, amenity_id, data):
+        Amenity.update(amenity_id, data)
+        return Amenity.get(amenity_id)
 
 
 facade = Facade()
