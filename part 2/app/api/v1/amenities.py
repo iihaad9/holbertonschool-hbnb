@@ -37,8 +37,8 @@ class AmenityList(Resource):
     def post(self):
         """Create a new amenity"""
         amenity_data = api.payload
-
         new_amenity = facade.create_amenity(amenity_data)
+
         return {
             'id': new_amenity.id,
             'name': new_amenity.name,
@@ -73,6 +73,8 @@ class AmenityResource(Resource):
 
         update_data = api.payload
         updated_amenity = facade.update_amenity(amenity_id, update_data)
+        if not updated_amenity:
+            return {'error': 'Amenity not found'}, 404
 
         return {
             'id': updated_amenity.id,
