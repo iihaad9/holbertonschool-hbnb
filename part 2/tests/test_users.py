@@ -21,3 +21,19 @@ class TestUserEndpoints(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    def test_create_user_duplicate_email(self):
+        # Create first user
+        self.client.post('/api/v1/users/', json={
+            "first_name": "Test",
+            "last_name": "User",
+            "email": "duplicate@example.com"
+        })
+
+        # Try creating same email again
+        response = self.client.post('/api/v1/users/', json={
+            "first_name": "Test",
+            "last_name": "User",
+            "email": "duplicate@example.com"
+        })
+
+        self.assertEqual(response.status_code, 400)
