@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from flask_restx import Namespace, Resource, fields
 from app.services.facade import facade
 
@@ -45,7 +46,7 @@ class AmenityList(Resource):
         }, 201
 
 
-@api.route('/<amenity_id>')
+@api.route('/<string:amenity_id>')
 class AmenityResource(Resource):
     @api.response(200, 'Amenity details retrieved successfully')
     @api.response(404, 'Amenity not found')
@@ -71,7 +72,6 @@ class AmenityResource(Resource):
             return {'error': 'Amenity not found'}, 404
 
         update_data = api.payload
-
         updated_amenity = facade.update_amenity(amenity_id, update_data)
 
         return {
