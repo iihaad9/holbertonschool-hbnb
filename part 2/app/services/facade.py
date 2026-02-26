@@ -137,4 +137,4 @@ class HBnBFacade:
         return Amenity.get(amenity_id)
 
 
-class HBnBFacade:
+facade = HBnBFacade()
