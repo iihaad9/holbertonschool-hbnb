@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+"""Entry point for HBnB application"""
+
 from app import create_app
 
 app = create_app()
