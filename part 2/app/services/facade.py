@@ -5,7 +5,7 @@ from app.models.review import Review
 from app.models.amenity import Amenity
 
 
-class Facade:
+class HBnBFacade:
     def __init__(self):
         # -------- USERS REPO --------
         self.user_repo = InMemoryRepository()
@@ -137,4 +137,4 @@ class Facade:
         return Amenity.get(amenity_id)
 
 
-facade = Facade()
+class HBnBFacade:
