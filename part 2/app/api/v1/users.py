@@ -1,9 +1,20 @@
 from flask_restx import Namespace, Resource, fields
 from app.services.facade import facade
+import re
 
 api = Namespace('users', description='User operations')
 
-# Define the user model for input validation and documentation
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _is_non_empty_string(value):
+    return isinstance(value, str) and value.strip() != ""
+
+
+def _is_valid_email(value):
+    return isinstance(value, str) and _EMAIL_RE.match(value.strip()) is not None
+
+
 user_model = api.model('User', {
     'first_name': fields.String(required=True, description='First name of the user'),
     'last_name': fields.String(required=True, description='Last name of the user'),
@@ -16,11 +27,12 @@ update_user_model = api.model('UpdateUser', {
     'email': fields.String(description='Updated email')
 })
 
+
 @api.route('/')
 class UserList(Resource):
+
     @api.response(200, 'List of users retrieved successfully')
     def get(self):
-        """Get all users"""
         users = facade.get_all_users()
         return [
             {
@@ -34,17 +46,28 @@ class UserList(Resource):
 
     @api.expect(user_model, validate=True)
     @api.response(201, 'User successfully created')
-    @api.response(400, 'Email already registered')
     @api.response(400, 'Invalid input data')
     def post(self):
-        """Register a new user"""
         user_data = api.payload
+
+        if not _is_non_empty_string(user_data.get("first_name")):
+            return {"error": "first_name is required"}, 400
+
+        if not _is_non_empty_string(user_data.get("last_name")):
+            return {"error": "last_name is required"}, 400
+
+        if not _is_valid_email(user_data.get("email")):
+            return {"error": "invalid email format"}, 400
 
         existing_user = facade.get_user_by_email(user_data['email'])
         if existing_user:
             return {'error': 'Email already registered'}, 400
 
-        new_user = facade.create_user(user_data)
+        try:
+            new_user = facade.create_user(user_data)
+        except ValueError as e:
+            return {"error": str(e)}, 400
+
         return {
             'id': new_user.id,
             'first_name': new_user.first_name,
@@ -55,10 +78,10 @@ class UserList(Resource):
 
 @api.route('/<user_id>')
 class UserResource(Resource):
+
     @api.response(200, 'User details retrieved successfully')
     @api.response(404, 'User not found')
     def get(self, user_id):
-        """Get user details by ID"""
         user = facade.get_user(user_id)
         if not user:
             return {'error': 'User not found'}, 404
@@ -70,27 +93,36 @@ class UserResource(Resource):
             'email': user.email
         }, 200
 
-    
     @api.expect(update_user_model, validate=True)
     @api.response(200, 'User successfully updated')
     @api.response(404, 'User not found')
-    @api.response(409, 'Email already registered')
+    @api.response(400, 'Invalid input data')
     def put(self, user_id):
-        """Update user details"""
 
         user = facade.get_user(user_id)
         if not user:
             return {'error': 'User not found'}, 404
 
-        update_data = api.payload
+        update_data = api.payload or {}
 
-        
-        if 'email' in update_data:
+        if "first_name" in update_data and not _is_non_empty_string(update_data.get("first_name")):
+            return {"error": "first_name cannot be empty"}, 400
+
+        if "last_name" in update_data and not _is_non_empty_string(update_data.get("last_name")):
+            return {"error": "last_name cannot be empty"}, 400
+
+        if "email" in update_data:
+            if not _is_valid_email(update_data.get("email")):
+                return {"error": "invalid email format"}, 400
+
             existing_user = facade.get_user_by_email(update_data['email'])
             if existing_user and existing_user.id != user_id:
-                return {'error': 'Email already registered'}, 409
+                return {'error': 'Email already registered'}, 400
 
-        updated_user = facade.update_user(user_id, update_data)
+        try:
+            updated_user = facade.update_user(user_id, update_data)
+        except ValueError as e:
+            return {"error": str(e)}, 400
 
         return {
             'id': updated_user.id,
