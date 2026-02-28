@@ -1,14 +1,33 @@
+#!/usr/bin/python3
+"""Place model"""
+
+from typing import TYPE_CHECKING, List, Optional
+
 from app.models.base_model import BaseModel
 from app.models.user import User
-from app.models.review import Review
-from app.models.amenity import Amenity
+
+if TYPE_CHECKING:
+    from app.models.review import Review
+    from app.models.amenity import Amenity
 
 
 class Place(BaseModel):
+    """Place entity"""
+
     repository = None
 
-    def __init__(self, title, description, price, latitude, longitude, owner, **kwargs):
+    def __init__(
+        self,
+        title: str,
+        description: Optional[str],
+        price,
+        latitude,
+        longitude,
+        owner: User,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
+
         self.title = title
         self.description = description
         self.price = price
@@ -16,15 +35,16 @@ class Place(BaseModel):
         self.longitude = longitude
         self.owner = owner
 
-        self.reviews = []
-        self.amenities = []
+        # العلاقات المطلوبة بالمشروع
+        self.reviews: List["Review"] = []
+        self.amenities: List["Amenity"] = []
 
         self._validate()
 
     def _validate(self):
         if not isinstance(self.title, str) or not self.title.strip():
             raise ValueError("title is required")
-        if len(self.title) > 100:
+        if len(self.title.strip()) > 100:
             raise ValueError("title max length is 100")
 
         if self.description is not None and not isinstance(self.description, str):
@@ -42,29 +62,32 @@ class Place(BaseModel):
         if not isinstance(self.owner, User):
             raise ValueError("owner must be a User instance")
 
-        if not isinstance(self.reviews, list):
-            raise ValueError("reviews must be a list")
-        if not all(isinstance(r, Review) for r in self.reviews):
-            raise ValueError("reviews must contain Review instances")
-
-        if not isinstance(self.amenities, list):
-            raise ValueError("amenities must be a list")
-        if not all(isinstance(a, Amenity) for a in self.amenities):
-            raise ValueError("amenities must contain Amenity instances")
-
     def add_review(self, review):
+        """Attach a review to this place."""
+        # Import داخلي لتجنب circular import
+        from app.models.review import Review
+
         if not isinstance(review, Review):
             raise ValueError("review must be a Review instance")
-        if review not in self.reviews:
-            self.reviews.append(review)
-            self.touch()
+        if review.place != self:
+            raise ValueError("review.place must reference this place")
+
+        self.reviews.append(review)
+        self.touch()
+        return review
 
     def add_amenity(self, amenity):
+        """Attach an amenity to this place."""
+        from app.models.amenity import Amenity
+
         if not isinstance(amenity, Amenity):
             raise ValueError("amenity must be an Amenity instance")
-        if amenity not in self.amenities:
-            self.amenities.append(amenity)
-            self.touch()
+        if amenity in self.amenities:
+            return amenity
+
+        self.amenities.append(amenity)
+        self.touch()
+        return amenity
 
     @classmethod
     def set_repository(cls, repo):
@@ -104,14 +127,14 @@ class Place(BaseModel):
 
     def to_dict(self):
         data = super().to_dict()
-        data.update({
-            "title": self.title,
-            "description": self.description,
-            "price": float(self.price),
-            "latitude": float(self.latitude),
-            "longitude": float(self.longitude),
-            "owner": self.owner.to_dict(),
-            "reviews": [r.to_dict() for r in self.reviews],
-            "amenities": [a.to_dict() for a in self.amenities],
-        })
+        data.update(
+            {
+                "title": self.title,
+                "description": self.description,
+                "price": float(self.price),
+                "latitude": float(self.latitude),
+                "longitude": float(self.longitude),
+                "owner_id": self.owner.id,
+            }
+        )
         return data

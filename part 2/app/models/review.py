@@ -1,9 +1,18 @@
+#!/usr/bin/python3
+"""Review model"""
+
+from typing import TYPE_CHECKING
+
 from app.models.base_model import BaseModel
 from app.models.user import User
-from app.models.place import Place
+
+if TYPE_CHECKING:
+    from app.models.place import Place
 
 
 class Review(BaseModel):
+    """Review entity"""
+
     repository = None
 
     def __init__(self, text, rating, user, place, **kwargs):
@@ -14,10 +23,12 @@ class Review(BaseModel):
 
         self.set_text(text)
         self.set_rating(rating)
-
         self._validate_relations()
 
     def _validate_relations(self):
+        # Import داخلي لتجنب circular import
+        from app.models.place import Place
+
         if not isinstance(self.user, User):
             raise ValueError("user must be a User instance")
         if not isinstance(self.place, Place):
@@ -58,6 +69,11 @@ class Review(BaseModel):
     def create(cls, text, rating, user, place):
         review = cls(text=text, rating=rating, user=user, place=place)
         cls._repo().add(review)
+
+        # اربطها داخل place (ميزة حسب rubric)
+        if hasattr(place, "add_review"):
+            place.add_review(review)
+
         return review
 
     @classmethod
@@ -76,16 +92,14 @@ class Review(BaseModel):
     def delete(cls, obj_id):
         return cls._repo().delete(obj_id)
 
-    @classmethod
-    def get_by_attribute(cls, attr, value):
-        return cls._repo().get_by_attribute(attr, value)
-
     def to_dict(self):
         data = super().to_dict()
-        data.update({
-            "text": self.text,
-            "rating": self.rating,
-            "user_id": self.user.id,
-            "place_id": self.place.id,
-        })
+        data.update(
+            {
+                "text": self.text,
+                "rating": self.rating,
+                "user_id": self.user.id,
+                "place_id": self.place.id,
+            }
+        )
         return data

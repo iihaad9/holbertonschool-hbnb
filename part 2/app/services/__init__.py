@@ -1,3 +1,6 @@
-from app.services.facade import Facade
+#!/usr/bin/python3
+"""Services package initializer."""
 
-facade = Facade()
+from app.services.facade import HBnBFacade, facade
+
+__all__ = ["HBnBFacade", "facade"]
