@@ -15,37 +15,66 @@ python3 run.py
 
 Swagger documentation available at:
 
-/api/v1/
+http://localhost:5000/api/v1/
 
 ---
 
 ## 2. Automated Unit Tests
 
+All automated tests were implemented using `unittest`.
+
 Run all tests using:
 
-python3 -m unittest discover tests
+python3 -m unittest discover -s tests -p "test_*.py" -v
 
-Implemented test files:
+### Test Coverage Includes
+
+- Business Logic validation (model-level validation)
+- Relationship methods (add_amenity, review linking)
+- API endpoint validation
+- Correct HTTP status codes
+- Error handling
+
+### Test Files
 
 - tests/test_users.py
 - tests/test_places.py
 - tests/test_amenities.py
 - tests/test_reviews.py
+- tests/test_models_validation.py
+- tests/test_relationships.py
 
-All tests validate:
-- Correct HTTP status codes
-- Successful object creation
-- Validation errors
-- Invalid input handling
+### Business Logic Validation Tests
+
+These tests directly instantiate model classes to validate:
+
+- Invalid email format
+- Empty required fields
+- Negative price
+- Invalid latitude (>90 or <-90)
+- Invalid longitude (>180 or <-180)
+- Invalid rating (outside 1–5)
+- Empty review text
+
+These tests ensure validation exists in the business logic layer, not only at API level.
 
 ---
 
 ## 3. Manual Testing (Black-Box Testing)
 
-Testing was performed using:
+Black-box testing was performed using:
+
 - Swagger UI
 - cURL
-- Browser
+- Browser requests
+
+Each endpoint was tested for:
+
+- Success cases
+- Invalid input
+- Missing fields
+- Boundary values
+- Invalid relationships
 
 ---
 
@@ -55,42 +84,27 @@ Testing was performed using:
 
 POST /api/v1/users/
 
-Request:
-{
-  "first_name": "Fahad",
-  "last_name": "Alanzi",
-  "email": "fahad_test@example.com"
-}
-
 Expected:
 - 201 Created
 - Response contains generated id
 
----
-
 ### Duplicate Email (400)
-
-POST with same email again
 
 Expected:
 - 400 Bad Request
 - { "error": "Email already registered" }
 
----
-
-### Get All Users (200)
-
-GET /api/v1/users/
+### Invalid Email Format (400)
 
 Expected:
-- 200 OK
-- List of users returned
+- 400 Bad Request
 
----
+### Missing Required Fields (400)
 
-### Get User by ID (200 / 404)
+Expected:
+- 400 Bad Request
 
-GET /api/v1/users/<user_id>
+### Get User by ID
 
 Expected:
 - 200 if exists
@@ -102,61 +116,39 @@ Expected:
 
 ### Create Place (201)
 
-POST /api/v1/places/
-
-Request:
-{
-  "title": "My First Place",
-  "description": "Nice apartment",
-  "price": 200,
-  "latitude": 24.7,
-  "longitude": 46.6,
-  "owner_id": "<VALID_USER_ID>"
-}
-
 Expected:
 - 201 Created
-- Response contains place id
-- Owner object returned (expanded attributes)
-
----
+- Owner returned as expanded object
+- Amenities returned as list
 
 ### Invalid Owner (404)
 
-POST with fake owner_id
-
 Expected:
 - 404 Not Found
-- { "error": "Owner not found" }
 
----
+### Boundary Value Testing
 
-### Get All Places (200)
+Price:
+- price = 0 → valid
+- price < 0 → 400
 
-GET /api/v1/places/
+Latitude:
+- latitude = -90 → valid
+- latitude = 90 → valid
+- latitude > 90 → 400
 
-Expected:
-- 200 OK
-- List of places returned
+Longitude:
+- longitude = -180 → valid
+- longitude = 180 → valid
+- longitude > 180 → 400
 
----
-
-### Update Place (200)
-
-PUT /api/v1/places/<place_id>
-
-Example:
-{ "price": 500 }
+### Update Place
 
 Expected:
 - 200 OK
-- Updated value reflected
+- Updated values reflected
 
----
-
-### Delete Place (204)
-
-DELETE /api/v1/places/<place_id>
+### Delete Place
 
 Expected:
 - 204 No Content
@@ -167,35 +159,18 @@ Expected:
 
 ### Create Amenity (201)
 
-POST /api/v1/amenities/
-
-Request:
-{
-  "name": "WiFi"
-}
-
 Expected:
 - 201 Created
-- Response contains amenity id
 
----
-
-### Missing Name (400)
-
-POST with empty body {}
+### Empty Name (400)
 
 Expected:
 - 400 Bad Request
 
----
-
-### Get All Amenities (200)
-
-GET /api/v1/amenities/
+### Duplicate Amenity Name (if applicable)
 
 Expected:
-- 200 OK
-- List returned
+- Validation handled correctly
 
 ---
 
@@ -203,34 +178,28 @@ Expected:
 
 ### Create Review (201)
 
-POST /api/v1/reviews/
-
-Request:
-{
-  "text": "Great place!",
-  "rating": 5,
-  "user_id": "<VALID_USER_ID>",
-  "place_id": "<VALID_PLACE_ID>"
-}
-
 Expected:
 - 201 Created
-- Response contains review id
+- Review linked to correct user and place
 
----
+### Rating Boundary Testing
 
-### Invalid Rating (400)
+- rating = 1 → valid
+- rating = 5 → valid
+- rating = 0 → 400
+- rating = 6 → 400
 
-POST with rating outside range (e.g., 10)
+### Missing text (400)
 
 Expected:
 - 400 Bad Request
 
----
+### Invalid user_id / place_id (404)
+
+Expected:
+- 404 Not Found
 
 ### Get All Reviews (200)
-
-GET /api/v1/reviews/
 
 Expected:
 - 200 OK
@@ -238,19 +207,44 @@ Expected:
 
 ---
 
-## 4. Validation Summary
+## 4. Relationship Testing
 
-The API correctly validates:
+Relationship behavior validated through automated tests:
+
+- add_amenity correctly attaches amenity to place
+- Review correctly links user and place
+- No broken references allowed
+- Non-existent related entities return proper errors
+
+---
+
+## 5. Validation Summary
+
+The system validates:
 
 - Required fields
-- Maximum field lengths
-- Positive numeric values
-- Coordinate ranges
+- Field types
 - Unique email constraint
+- Positive numeric values
+- Coordinate boundaries
 - Rating range (1–5)
-- Existence of related entities (owner, user, place)
+- Existence of related entities
+- Relationship integrity
 
-All endpoints return appropriate HTTP status codes and handle edge cases correctly.
+All endpoints return appropriate HTTP status codes and properly handle both valid and invalid input.
+
+---
+
+## Conclusion
+
+The API has been validated using:
+
+- Automated unit tests (business logic + API)
+- Black-box manual testing
+- Boundary value testing
+- Relationship integrity testing
+
+All endpoints behave as expected under both normal and edge-case conditions.
 
 ---
 
