@@ -158,9 +158,22 @@ class HBnBFacade:
     #             REVIEWS
     # ================================
     def create_review(self, data):
+        user_id = data.get("user_id")
+        place_id = data.get("place_id")
+
+        user = self.get_user(user_id) if user_id else None
+        if not user:
+            return None, "user_not_found"
+
+        place = self.get_place(place_id) if place_id else None
+        if not place:
+            return None, "place_not_found"
+
+        text = data.get("text")
         rating = data.get("rating")
-        comment = data.get("comment")
-        return Review.create(rating, comment)
+
+        review = Review.create(text, rating, user, place)
+        return review, None
 
     def get_review(self, review_id):
         return Review.get(review_id)

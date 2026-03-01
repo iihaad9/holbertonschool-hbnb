@@ -1,48 +1,46 @@
-#!/usr/bin/python3
+from flask import request
 from flask_restx import Namespace, Resource, fields
+
 from app.services.facade import facade
 
-api = Namespace("reviews", description="Review operations")
+
+api = Namespace("reviews", path="/api/v1/reviews", description="Reviews operations")
 
 review_model = api.model(
     "Review",
     {
-        "text": fields.String(required=True, description="Text of the review"),
-        "rating": fields.Integer(required=True, description="Rating between 1 and 5"),
-        "user_id": fields.String(required=True, description="User ID"),
-        "place_id": fields.String(required=True, description="Place ID"),
+        "text": fields.String(required=True),
+        "rating": fields.Integer(required=True, min=1, max=5),
+        "user_id": fields.String(required=True),
+        "place_id": fields.String(required=True),
     },
 )
 
 update_review_model = api.model(
     "UpdateReview",
     {
-        "text": fields.String(description="Updated review text"),
-        "rating": fields.Integer(description="Updated rating between 1 and 5"),
+        "text": fields.String(required=False),
+        "rating": fields.Integer(required=False, min=1, max=5),
     },
 )
 
 
 @api.route("/")
 class ReviewList(Resource):
-
     @api.expect(review_model, validate=True)
-    @api.response(201, "Review created successfully")
+    @api.response(201, "Review successfully created")
     @api.response(400, "Invalid input data")
     @api.response(404, "User or Place not found")
     def post(self):
-        data = api.payload
+        data = api.payload or {}
+        review, err = facade.create_review(data)
 
-        result = facade.create_review(data)
-
-        if isinstance(result, tuple):
-            review, error = result
-            if review is None:
-                if error in ("user_not_found", "place_not_found"):
-                    return {"error": error}, 404
-                return {"error": error}, 400
-        else:
-            review = result
+        if err == "user_not_found":
+            return {"error": "User not found"}, 404
+        if err == "place_not_found":
+            return {"error": "Place not found"}, 404
+        if err:
+            return {"error": str(err)}, 400
 
         return review.to_dict(), 201
 
@@ -53,8 +51,8 @@ class ReviewList(Resource):
 
 
 @api.route("/<string:review_id>")
+@api.param("review_id", "The review identifier")
 class ReviewResource(Resource):
-
     @api.response(200, "Review retrieved successfully")
     @api.response(404, "Review not found")
     def get(self, review_id):
@@ -64,18 +62,24 @@ class ReviewResource(Resource):
         return review.to_dict(), 200
 
     @api.expect(update_review_model, validate=True)
-    @api.response(200, "Review updated successfully")
+    @api.response(200, "Review successfully updated")
     @api.response(404, "Review not found")
+    @api.response(400, "Invalid input data")
     def put(self, review_id):
-        updated_review = facade.update_review(review_id, api.payload)
-        if not updated_review:
-            return {"error": "Review not found"}, 404
-        return updated_review.to_dict(), 200
+        data = api.payload or {}
+        review, err = facade.update_review(review_id, data)
 
-    @api.response(200, "Review deleted successfully")
+        if err == "review_not_found":
+            return {"error": "Review not found"}, 404
+        if err:
+            return {"error": str(err)}, 400
+
+        return review.to_dict(), 200
+
+    @api.response(200, "Review successfully deleted")
     @api.response(404, "Review not found")
     def delete(self, review_id):
-        deleted = facade.delete_review(review_id)
-        if not deleted:
+        ok = facade.delete_review(review_id)
+        if not ok:
             return {"error": "Review not found"}, 404
-        return {"message": "Review deleted successfully"}, 200
+        return {"message": "Review successfully deleted"}, 200
