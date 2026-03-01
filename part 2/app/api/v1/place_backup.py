@@ -72,15 +72,18 @@ class PlaceList(Resource):
     @api.response(200, "List of places retrieved successfully")
     def get(self):
         places = facade.get_all_places()
-        return [
-            {
-                "id": p.id,
-                "title": p.title,
-                "latitude": float(p.latitude),
-                "longitude": float(p.longitude),
-            }
-            for p in places
-        ], 200
+
+        result = []
+        for p in places:
+            result.append(
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "latitude": float(p.latitude),
+                    "longitude": float(p.longitude),
+                }
+            )
+        return result, 200
 
     @api.expect(place_model, validate=True)
     @api.response(201, "Place successfully created")
@@ -88,14 +91,13 @@ class PlaceList(Resource):
     @api.response(404, "Owner or amenity not found")
     def post(self):
         data = api.payload or {}
+
         place, err = facade.create_place(data)
 
         if err == "owner_not_found":
             return {"error": "Owner not found"}, 404
         if err == "amenity_not_found":
             return {"error": "Amenity not found"}, 404
-        if err == "invalid_amenities":
-            return {"error": "amenities must be a list of valid amenity IDs"}, 400
         if err:
             return {"error": err}, 400
 
@@ -115,8 +117,12 @@ class PlaceResource(Resource):
     @api.expect(update_place_model, validate=True)
     @api.response(200, "Place successfully updated")
     @api.response(400, "Invalid input data")
-    @api.response(404, "Place, owner, or amenity not found")
+    @api.response(404, "Place or owner or amenity not found")
     def put(self, place_id):
+        place = facade.get_place(place_id)
+        if not place:
+            return {"error": "Place not found"}, 404
+
         data = api.payload or {}
 
         msg = _validate_place_update(data)
@@ -125,14 +131,10 @@ class PlaceResource(Resource):
 
         updated, err = facade.update_place(place_id, data)
 
-        if err == "place_not_found":
-            return {"error": "Place not found"}, 404
         if err == "owner_not_found":
             return {"error": "Owner not found"}, 404
         if err == "amenity_not_found":
             return {"error": "Amenity not found"}, 404
-        if err == "invalid_amenities":
-            return {"error": "amenities must be a list of valid amenity IDs"}, 400
         if err:
             return {"error": err}, 400
 

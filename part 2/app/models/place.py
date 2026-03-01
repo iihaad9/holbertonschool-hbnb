@@ -35,7 +35,6 @@ class Place(BaseModel):
         self.longitude = longitude
         self.owner = owner
 
-        # العلاقات المطلوبة بالمشروع
         self.reviews: List["Review"] = []
         self.amenities: List["Amenity"] = []
 
@@ -53,10 +52,14 @@ class Place(BaseModel):
         if not isinstance(self.price, (int, float)) or float(self.price) <= 0:
             raise ValueError("price must be a positive number")
 
-        if not isinstance(self.latitude, (int, float)) or not (-90.0 <= float(self.latitude) <= 90.0):
+        if not isinstance(self.latitude, (int, float)) or not (
+            -90.0 <= float(self.latitude) <= 90.0
+        ):
             raise ValueError("latitude must be between -90.0 and 90.0")
 
-        if not isinstance(self.longitude, (int, float)) or not (-180.0 <= float(self.longitude) <= 180.0):
+        if not isinstance(self.longitude, (int, float)) or not (
+            -180.0 <= float(self.longitude) <= 180.0
+        ):
             raise ValueError("longitude must be between -180.0 and 180.0")
 
         if not isinstance(self.owner, User):
@@ -64,7 +67,6 @@ class Place(BaseModel):
 
     def add_review(self, review):
         """Attach a review to this place."""
-        # Import داخلي لتجنب circular import
         from app.models.review import Review
 
         if not isinstance(review, Review):
@@ -96,7 +98,9 @@ class Place(BaseModel):
     @classmethod
     def _repo(cls):
         if cls.repository is None:
-            raise RuntimeError("Place.repository is not set. Call Place.set_repository(repo) first.")
+            raise RuntimeError(
+                "Place.repository is not set. Call Place.set_repository(repo) first."
+            )
         return cls.repository
 
     @classmethod
@@ -134,7 +138,8 @@ class Place(BaseModel):
                 "price": float(self.price),
                 "latitude": float(self.latitude),
                 "longitude": float(self.longitude),
-                "owner_id": self.owner.id,
+                "owner": self.owner.to_dict(),
+                "amenities": [a.to_dict() for a in self.amenities],
             }
         )
         return data
