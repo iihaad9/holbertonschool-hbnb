@@ -1,58 +1,45 @@
 #!/usr/bin/python3
 """Review model"""
 
-from typing import TYPE_CHECKING
-
 from app.models.base_model import BaseModel
 from app.models.user import User
-
-if TYPE_CHECKING:
-    from app.models.place import Place
+from app.models.place import Place
 
 
 class Review(BaseModel):
-    """Review entity"""
+    """Review class"""
 
     repository = None
 
     def __init__(self, text, rating, user, place, **kwargs):
         super().__init__(**kwargs)
-
+        self.text = text
+        self.rating = rating
         self.user = user
         self.place = place
+        self._validate()
 
-        self.set_text(text)
-        self.set_rating(rating)
-        self._validate_relations()
+    def _validate(self):
+        if not isinstance(self.text, str) or not self.text.strip():
+            raise ValueError("text cannot be empty")
 
-    def _validate_relations(self):
-        # Import داخلي لتجنب circular import
-        from app.models.place import Place
+        if not isinstance(self.rating, int) or not (1 <= self.rating <= 5):
+            raise ValueError("rating must be an integer between 1 and 5")
 
         if not isinstance(self.user, User):
             raise ValueError("user must be a User instance")
+
         if not isinstance(self.place, Place):
             raise ValueError("place must be a Place instance")
 
-    def set_rating(self, rating):
-        if rating is None:
-            raise ValueError("rating is required")
-        if not isinstance(rating, int) or rating < 1 or rating > 5:
-            raise ValueError("rating must be an integer between 1 and 5")
-        self.rating = rating
-        self.touch()
-
-    def set_text(self, text):
-        if not isinstance(text, str) or not text.strip():
-            raise ValueError("text cannot be empty")
-        self.text = text.strip()
-        self.touch()
-
-    def apply_update(self, data):
-        if "rating" in data:
-            self.set_rating(data["rating"])
+    def apply_update(self, data: dict):
         if "text" in data:
-            self.set_text(data["text"])
+            self.text = data["text"]
+        if "rating" in data:
+            self.rating = data["rating"]
+
+        self._validate()
+        self.touch()
         return self
 
     @classmethod
@@ -62,18 +49,13 @@ class Review(BaseModel):
     @classmethod
     def _repo(cls):
         if cls.repository is None:
-            raise RuntimeError("Review.repository is not set. Call Review.set_repository(repo) first.")
+            raise ValueError("Repository not set")
         return cls.repository
 
     @classmethod
     def create(cls, text, rating, user, place):
         review = cls(text=text, rating=rating, user=user, place=place)
         cls._repo().add(review)
-
-        # اربطها داخل place (ميزة حسب rubric)
-        if hasattr(place, "add_review"):
-            place.add_review(review)
-
         return review
 
     @classmethod
@@ -86,7 +68,12 @@ class Review(BaseModel):
 
     @classmethod
     def update(cls, obj_id, data):
-        return cls._repo().update(obj_id, data)
+        review = cls.get(obj_id)
+        if not review:
+            return None
+        review.apply_update(data)
+        cls._repo().update(obj_id, data)
+        return review
 
     @classmethod
     def delete(cls, obj_id):
@@ -98,8 +85,8 @@ class Review(BaseModel):
             {
                 "text": self.text,
                 "rating": self.rating,
-                "user_id": self.user.id,
-                "place_id": self.place.id,
+                "user_id": self.user.id if self.user else None,
+                "place_id": self.place.id if self.place else None,
             }
         )
         return data
