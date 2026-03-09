@@ -1,26 +1,27 @@
+from app import db
 import uuid
 from datetime import datetime
 
-class BaseModel:
-    """Base model class to use for stamps and id."""
 
-    def __init__(self, **kwargs):
-        self.id = kwargs.get("id", uuid.uuid4().hex)
+class BaseModel(db.Model):
+    __abstract__ = True
 
-        created_at = kwargs.get("created_at")
-        updated_at = kwargs.get("updated_at")
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
-        self.created_at = self._parse_dt(created_at) if created_at else datetime.now()
-        self.updated_at = self._parse_dt(updated_at) if updated_at else datetime.now()
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )
 
-    def touch(self):
-        self.updated_at = datetime.now()
-
-    def save(self):
-        self.touch()
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
 
     def apply_update(self, data: dict):
-        """Default update behavior: set attributes from dict, then touch()."""
         if not isinstance(data, dict):
             raise TypeError("data must be a dict")
 
@@ -30,18 +31,9 @@ class BaseModel:
             if hasattr(self, k):
                 setattr(self, k, v)
 
-        self.touch()
-
     def to_dict(self):
         return {
             "id": self.id,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
-
-    @staticmethod
-    def _parse_dt(value):
-        if isinstance(value, datetime):
-            return value
-        # ISO format string
-        return datetime.fromisoformat(value)

@@ -39,4 +39,8 @@ def create_app(config_class="config.DevelopmentConfig"):
     api.add_namespace(amenities_ns, path="/api/v1/amenities")
     api.add_namespace(auth_ns, path="/api/v1/auth")
     
+    with app.app_context():
+        from app.models.user import User
+        db.create_all()
+
     return app
