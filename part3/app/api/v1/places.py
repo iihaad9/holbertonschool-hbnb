@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-"""Place endpoints"""
 
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.services.facade import facade
 
 api = Namespace("places", description="Place operations")
@@ -67,6 +67,11 @@ def _validate_place_update(data):
     return None
 
 
+def _current_user():
+    user_id = get_jwt_identity()
+    return facade.get_user(user_id)
+
+
 @api.route("/")
 class PlaceList(Resource):
     @api.response(200, "List of places retrieved successfully")
@@ -82,12 +87,24 @@ class PlaceList(Resource):
             for p in places
         ], 200
 
+    @jwt_required()
     @api.expect(place_model, validate=True)
     @api.response(201, "Place successfully created")
     @api.response(400, "Invalid input data")
+    @api.response(403, "Forbidden")
     @api.response(404, "Owner or amenity not found")
     def post(self):
-        data = api.payload or {}
+        data = dict(api.payload or {})
+        claims = get_jwt()
+        current_user = _current_user()
+
+        if not current_user:
+            return {"error": "User not found"}, 404
+
+        if not claims.get("is_admin", False):
+            if data.get("owner_id") != current_user.id:
+                return {"error": "You can only create places for your own account"}, 403
+
         place, err = facade.create_place(data)
 
         if err == "owner_not_found":
@@ -112,12 +129,29 @@ class PlaceResource(Resource):
             return {"error": "Place not found"}, 404
         return place.to_dict(), 200
 
+    @jwt_required()
     @api.expect(update_place_model, validate=True)
     @api.response(200, "Place successfully updated")
     @api.response(400, "Invalid input data")
+    @api.response(403, "Forbidden")
     @api.response(404, "Place, owner, or amenity not found")
     def put(self, place_id):
-        data = api.payload or {}
+        data = dict(api.payload or {})
+        place = facade.get_place(place_id)
+        if not place:
+            return {"error": "Place not found"}, 404
+
+        claims = get_jwt()
+        current_user = _current_user()
+
+        if not current_user:
+            return {"error": "User not found"}, 404
+
+        if not claims.get("is_admin", False):
+            if place.owner.id != current_user.id:
+                return {"error": "You can only update your own places"}, 403
+            if "owner_id" in data and data.get("owner_id") != current_user.id:
+                return {"error": "You cannot transfer ownership of the place"}, 403
 
         msg = _validate_place_update(data)
         if msg:
@@ -137,3 +171,28 @@ class PlaceResource(Resource):
             return {"error": err}, 400
 
         return updated.to_dict(), 200
+
+    @jwt_required()
+    @api.response(200, "Place successfully deleted")
+    @api.response(403, "Forbidden")
+    @api.response(404, "Place not found")
+    def delete(self, place_id):
+        place = facade.get_place(place_id)
+        if not place:
+            return {"error": "Place not found"}, 404
+
+        claims = get_jwt()
+        current_user = _current_user()
+
+        if not current_user:
+            return {"error": "User not found"}, 404
+
+        if not claims.get("is_admin", False):
+            if place.owner.id != current_user.id:
+                return {"error": "You can only delete your own places"}, 403
+
+        ok = facade.delete_place(place_id)
+        if not ok:
+            return {"error": "Place not found"}, 404
+
+        return {"message": "Place deleted successfully"}, 200
