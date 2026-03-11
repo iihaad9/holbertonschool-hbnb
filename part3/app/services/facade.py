@@ -146,7 +146,7 @@ class HBnBFacade:
     def delete_place(self, place_id):
         return Place.delete(place_id)
 
-    def create_review(self, data):
+        def create_review(self, data):
         user_id = data.get("user_id")
         place_id = data.get("place_id")
 
@@ -162,7 +162,7 @@ class HBnBFacade:
         rating = data.get("rating")
 
         review = Review.create(text, rating, user.id, place.id)
-        return review, None  
+        return review, None 
 
     def get_review(self, review_id):
         return Review.get(review_id)
