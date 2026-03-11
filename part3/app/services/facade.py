@@ -160,8 +160,7 @@ class HBnBFacade:
 
         text = data.get("text")
         rating = data.get("rating")
-                review = Review.create(text, rating, user.id, place.id)
-
+                review = Review.create(text, rating, user, place)
         return review, None 
 
     def get_review(self, review_id):
