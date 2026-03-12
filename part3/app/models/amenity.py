@@ -1,13 +1,18 @@
 #!/usr/bin/python3
 """Amenity model"""
 
+from app import db
 from app.models.base_model import BaseModel
 
 
 class Amenity(BaseModel):
     """Amenity entity"""
 
+    __tablename__ = "amenities"
     repository = None
+
+    name = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
 
     def __init__(self, name, description=None, **kwargs):
         super().__init__(**kwargs)
@@ -71,6 +76,7 @@ class Amenity(BaseModel):
     def apply_update(self, data: dict):
         super().apply_update(data)
         self._validate(name=self.name, description=self.description)
+        return self
 
     def to_dict(self):
         data = super().to_dict()
