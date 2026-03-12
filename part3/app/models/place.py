@@ -1,43 +1,40 @@
 #!/usr/bin/python3
 """Place model"""
 
-from typing import TYPE_CHECKING, List, Optional
-
+from app import db
 from app.models.base_model import BaseModel
-from app.models.user import User
-
-if TYPE_CHECKING:
-    from app.models.review import Review
-    from app.models.amenity import Amenity
 
 
 class Place(BaseModel):
     """Place entity"""
 
+    __tablename__ = "places"
     repository = None
+
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(1024), nullable=True)
+    price = db.Column(db.Float, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    owner_id = db.Column(db.String(36), nullable=False)
 
     def __init__(
         self,
-        title: str,
-        description: Optional[str],
+        title,
+        description,
         price,
         latitude,
         longitude,
-        owner: User,
+        owner_id,
         **kwargs,
     ):
         super().__init__(**kwargs)
-
         self.title = title
         self.description = description
         self.price = price
         self.latitude = latitude
         self.longitude = longitude
-        self.owner = owner
-
-        self.reviews: List["Review"] = []
-        self.amenities: List["Amenity"] = []
-
+        self.owner_id = owner_id
         self._validate()
 
     def _validate(self):
@@ -62,34 +59,8 @@ class Place(BaseModel):
         ):
             raise ValueError("longitude must be between -180.0 and 180.0")
 
-        if not isinstance(self.owner, User):
-            raise ValueError("owner must be a User instance")
-
-    def add_review(self, review):
-        """Attach a review to this place."""
-        from app.models.review import Review
-
-        if not isinstance(review, Review):
-            raise ValueError("review must be a Review instance")
-        if review.place != self:
-            raise ValueError("review.place must reference this place")
-
-        self.reviews.append(review)
-        self.touch()
-        return review
-
-    def add_amenity(self, amenity):
-        """Attach an amenity to this place."""
-        from app.models.amenity import Amenity
-
-        if not isinstance(amenity, Amenity):
-            raise ValueError("amenity must be an Amenity instance")
-        if amenity in self.amenities:
-            return amenity
-
-        self.amenities.append(amenity)
-        self.touch()
-        return amenity
+        if not isinstance(self.owner_id, str) or not self.owner_id.strip():
+            raise ValueError("owner_id is required")
 
     @classmethod
     def set_repository(cls, repo):
@@ -104,8 +75,8 @@ class Place(BaseModel):
         return cls.repository
 
     @classmethod
-    def create(cls, title, description, price, latitude, longitude, owner):
-        place = cls(title, description, price, latitude, longitude, owner)
+    def create(cls, title, description, price, latitude, longitude, owner_id):
+        place = cls(title, description, price, latitude, longitude, owner_id)
         cls._repo().add(place)
         return place
 
@@ -128,6 +99,7 @@ class Place(BaseModel):
     def apply_update(self, data: dict):
         super().apply_update(data)
         self._validate()
+        return self
 
     def to_dict(self):
         data = super().to_dict()
@@ -138,8 +110,7 @@ class Place(BaseModel):
                 "price": float(self.price),
                 "latitude": float(self.latitude),
                 "longitude": float(self.longitude),
-                "owner": self.owner.to_dict(),
-                "amenities": [a.to_dict() for a in self.amenities],
+                "owner_id": self.owner_id,
             }
         )
         return data
