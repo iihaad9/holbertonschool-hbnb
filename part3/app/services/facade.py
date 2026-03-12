@@ -1,9 +1,13 @@
 from app.persistence.user_repository import UserRepository
-from app.persistence.repository import InMemoryRepository
+from app.persistence.place_repository import PlaceRepository
+from app.persistence.review_repository import ReviewRepository
+from app.persistence.amenity_repository import AmenityRepository
+
 from app.models.user import User
 from app.models.place import Place
 from app.models.review import Review
 from app.models.amenity import Amenity
+from app import db
 
 
 class HBnBFacade:
@@ -11,15 +15,16 @@ class HBnBFacade:
         self.user_repo = UserRepository()
         User.set_repository(self.user_repo)
 
-        self.place_repo = InMemoryRepository()
+        self.place_repo = PlaceRepository()
         Place.set_repository(self.place_repo)
 
-        self.review_repo = InMemoryRepository()
+        self.review_repo = ReviewRepository()
         Review.set_repository(self.review_repo)
 
-        self.amenity_repo = InMemoryRepository()
+        self.amenity_repo = AmenityRepository()
         Amenity.set_repository(self.amenity_repo)
 
+    # ---------------- Users ----------------
     def create_user(self, user_data):
         user = User(**user_data)
         self.user_repo.add(user)
@@ -40,10 +45,12 @@ class HBnBFacade:
     def get_user_by_email(self, email):
         return self.user_repo.get_user_by_email(email)
 
+    # ---------------- Amenities ----------------
     def create_amenity(self, data):
-        name = data.get("name")
-        description = data.get("description")
-        return Amenity.create(name=name, description=description)
+        return Amenity.create(
+            name=data.get("name"),
+            description=data.get("description"),
+        )
 
     def get_amenity(self, amenity_id):
         return Amenity.get(amenity_id)
@@ -52,8 +59,10 @@ class HBnBFacade:
         return Amenity.get_all()
 
     def update_amenity(self, amenity_id, data):
-        Amenity.update(amenity_id, data)
-        return Amenity.get(amenity_id)
+        amenity = Amenity.update(amenity_id, data)
+        if not amenity:
+            return None, "amenity_not_found"
+        return amenity, None
 
     def delete_amenity(self, amenity_id):
         return Amenity.delete(amenity_id)
@@ -66,16 +75,19 @@ class HBnBFacade:
             return None, "invalid_amenities"
 
         amenities = []
-        for aid in amenity_ids:
-            if not isinstance(aid, str) or not aid.strip():
+        for amenity_id in amenity_ids:
+            if not isinstance(amenity_id, str) or not amenity_id.strip():
                 return None, "invalid_amenities"
-            amenity = self.get_amenity(aid)
+
+            amenity = self.get_amenity(amenity_id)
             if not amenity:
                 return None, "amenity_not_found"
+
             amenities.append(amenity)
 
         return amenities, None
 
+    # ---------------- Places ----------------
     def create_place(self, data):
         owner_id = data.get("owner_id")
         owner = self.get_user(owner_id)
@@ -93,12 +105,13 @@ class HBnBFacade:
                 price=data["price"],
                 latitude=data["latitude"],
                 longitude=data["longitude"],
-                owner=owner,
+                owner_id=owner_id,
             )
 
             for amenity in amenities:
                 place.add_amenity(amenity)
 
+            db.session.commit()
             return place, None
         except Exception as e:
             return None, str(e)
@@ -115,30 +128,33 @@ class HBnBFacade:
             return None, "place_not_found"
 
         data = dict(data)
-        amenities_ids = None
+        amenity_ids = None
 
         if "amenities" in data:
-            amenities_ids = data.pop("amenities")
+            amenity_ids = data.pop("amenities")
 
         if "owner_id" in data:
             owner = self.get_user(data["owner_id"])
             if not owner:
                 return None, "owner_not_found"
-            data["owner"] = owner
-            data.pop("owner_id")
 
         try:
-            Place.update(place_id, data)
-            place = Place.get(place_id)
+            updated = Place.update(place_id, data)
+            if not updated:
+                return None, "place_not_found"
 
-            if amenities_ids is not None:
-                amenities, err = self._resolve_amenities(amenities_ids)
+            place = updated
+
+            if amenity_ids is not None:
+                amenities, err = self._resolve_amenities(amenity_ids)
                 if err:
                     return None, err
+
                 place.amenities = []
                 for amenity in amenities:
                     place.add_amenity(amenity)
 
+            db.session.commit()
             return place, None
         except Exception as e:
             return None, str(e)
@@ -146,7 +162,8 @@ class HBnBFacade:
     def delete_place(self, place_id):
         return Place.delete(place_id)
 
-        def create_review(self, data):
+    # ---------------- Reviews ----------------
+    def create_review(self, data):
         user_id = data.get("user_id")
         place_id = data.get("place_id")
 
@@ -158,10 +175,17 @@ class HBnBFacade:
         if not place:
             return None, "place_not_found"
 
-        text = data.get("text")
-        rating = data.get("rating")
-                review = Review.create(text, rating, user, place)
-        return review, None
+        try:
+            review = Review.create(
+                text=data.get("text"),
+                rating=data.get("rating"),
+                user_id=user_id,
+                place_id=place_id,
+            )
+            return review, None
+        except Exception as e:
+            return None, str(e)
+
     def get_review(self, review_id):
         return Review.get(review_id)
 

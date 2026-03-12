@@ -3,7 +3,7 @@
 
 from app import db
 from app.models.base_model import BaseModel
-
+from app.models.place_amenity import place_amenity
 
 class Amenity(BaseModel):
     """Amenity entity"""
@@ -12,6 +12,7 @@ class Amenity(BaseModel):
     repository = None
 
     name = db.Column(db.String(50), nullable=False)
+    places = db.relationship("Place", secondary=place_amenity, back_populates="amenities")
     description = db.Column(db.String(255), nullable=True)
 
     def __init__(self, name, description=None, **kwargs):

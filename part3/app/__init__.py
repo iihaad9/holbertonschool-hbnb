@@ -41,6 +41,10 @@ def create_app(config_class="config.DevelopmentConfig"):
     
     with app.app_context():
         from app.models.user import User
+        from app.models.place import Place
+        from app.models.review import Review
+        from app.models.amenity import Amenity
+        from app.models.place_amenity import place_amenity
         db.create_all()
 
     return app
