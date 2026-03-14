@@ -15,6 +15,9 @@ class User(BaseModel):
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
 
+    places = db.relationship("Place", back_populates="owner", cascade="all, delete-orphan")
+    reviews = db.relationship("Review", back_populates="user", cascade="all, delete-orphan")
+
     def __init__(self, first_name, last_name, email, password, is_admin=False, **kwargs):
         super().__init__(**kwargs)
         self.first_name = first_name
