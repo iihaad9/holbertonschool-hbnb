@@ -1,13 +1,11 @@
 #!/usr/bin/python3
-"""Place model"""
 
 from app import db
 from app.models.base_model import BaseModel
 from app.models.place_amenity import place_amenity
 
-class Place(BaseModel):
-    """Place entity"""
 
+class Place(BaseModel):
     __tablename__ = "places"
     repository = None
 
@@ -17,6 +15,7 @@ class Place(BaseModel):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+
     owner = db.relationship("User", back_populates="places")
     reviews = db.relationship("Review", back_populates="place", cascade="all, delete-orphan")
     amenities = db.relationship("Amenity", secondary=place_amenity, back_populates="places")
@@ -64,6 +63,11 @@ class Place(BaseModel):
 
         if not isinstance(self.owner_id, str) or not self.owner_id.strip():
             raise ValueError("owner_id is required")
+
+    def add_amenity(self, amenity):
+        if amenity not in self.amenities:
+            self.amenities.append(amenity)
+        return amenity
 
     @classmethod
     def set_repository(cls, repo):

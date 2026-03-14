@@ -24,7 +24,6 @@ class HBnBFacade:
         self.amenity_repo = AmenityRepository()
         Amenity.set_repository(self.amenity_repo)
 
-    # ---------------- Users ----------------
     def create_user(self, user_data):
         user = User(**user_data)
         self.user_repo.add(user)
@@ -45,7 +44,6 @@ class HBnBFacade:
     def get_user_by_email(self, email):
         return self.user_repo.get_user_by_email(email)
 
-    # ---------------- Amenities ----------------
     def create_amenity(self, data):
         return Amenity.create(
             name=data.get("name"),
@@ -59,10 +57,7 @@ class HBnBFacade:
         return Amenity.get_all()
 
     def update_amenity(self, amenity_id, data):
-        amenity = Amenity.update(amenity_id, data)
-        if not amenity:
-            return None, "amenity_not_found"
-        return amenity, None
+        return Amenity.update(amenity_id, data)
 
     def delete_amenity(self, amenity_id):
         return Amenity.delete(amenity_id)
@@ -87,7 +82,6 @@ class HBnBFacade:
 
         return amenities, None
 
-    # ---------------- Places ----------------
     def create_place(self, data):
         owner_id = data.get("owner_id")
         owner = self.get_user(owner_id)
@@ -114,6 +108,7 @@ class HBnBFacade:
             db.session.commit()
             return place, None
         except Exception as e:
+            db.session.rollback()
             return None, str(e)
 
     def get_place(self, place_id):
@@ -157,12 +152,12 @@ class HBnBFacade:
             db.session.commit()
             return place, None
         except Exception as e:
+            db.session.rollback()
             return None, str(e)
 
     def delete_place(self, place_id):
         return Place.delete(place_id)
 
-    # ---------------- Reviews ----------------
     def create_review(self, data):
         user_id = data.get("user_id")
         place_id = data.get("place_id")
