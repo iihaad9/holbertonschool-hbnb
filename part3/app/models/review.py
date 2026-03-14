@@ -19,12 +19,23 @@ class Review(BaseModel):
     user = db.relationship("User", back_populates="reviews")
     place = db.relationship("Place", back_populates="reviews")
 
-    def __init__(self, text, rating, user_id, place_id, **kwargs):
+    def __init__(self, text, rating, user_id=None, place_id=None, user=None, place=None, **kwargs):
         super().__init__(**kwargs)
         self.text = text
         self.rating = rating
-        self.user_id = user_id
-        self.place_id = place_id
+
+        if user is not None:
+            self.user = user
+            self.user_id = user.id
+        else:
+            self.user_id = user_id
+
+        if place is not None:
+            self.place = place
+            self.place_id = place.id
+        else:
+            self.place_id = place_id
+
         self._validate()
 
     def _validate(self):
@@ -53,8 +64,27 @@ class Review(BaseModel):
         return cls.repository
 
     @classmethod
-    def create(cls, text, rating, user_id, place_id):
-        review = cls(text=text, rating=rating, user_id=user_id, place_id=place_id)
+    def create(
+        cls,
+        text,
+        rating,
+        user=None,
+        place=None,
+        user_id=None,
+        place_id=None,
+    ):
+        if user is not None and place is not None and hasattr(user, "id") and hasattr(place, "id"):
+            review = cls(text=text, rating=rating, user=user, place=place)
+        else:
+            resolved_user_id = user_id if user_id is not None else user
+            resolved_place_id = place_id if place_id is not None else place
+            review = cls(
+                text=text,
+                rating=rating,
+                user_id=resolved_user_id,
+                place_id=resolved_place_id,
+            )
+
         cls._repo().add(review)
         return review
 

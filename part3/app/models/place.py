@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+"""Place model"""
 
 from app import db
 from app.models.base_model import BaseModel
@@ -6,6 +7,8 @@ from app.models.place_amenity import place_amenity
 
 
 class Place(BaseModel):
+    """Place entity"""
+
     __tablename__ = "places"
     repository = None
 
@@ -17,8 +20,16 @@ class Place(BaseModel):
     owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
 
     owner = db.relationship("User", back_populates="places")
-    reviews = db.relationship("Review", back_populates="place", cascade="all, delete-orphan")
-    amenities = db.relationship("Amenity", secondary=place_amenity, back_populates="places")
+    reviews = db.relationship(
+        "Review",
+        back_populates="place",
+        cascade="all, delete-orphan",
+    )
+    amenities = db.relationship(
+        "Amenity",
+        secondary=place_amenity,
+        back_populates="places",
+    )
 
     def __init__(
         self,
@@ -27,7 +38,8 @@ class Place(BaseModel):
         price,
         latitude,
         longitude,
-        owner_id,
+        owner_id=None,
+        owner=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -36,7 +48,13 @@ class Place(BaseModel):
         self.price = price
         self.latitude = latitude
         self.longitude = longitude
-        self.owner_id = owner_id
+
+        if owner is not None:
+            self.owner = owner
+            self.owner_id = owner.id
+        else:
+            self.owner_id = owner_id
+
         self._validate()
 
     def _validate(self):
@@ -82,8 +100,36 @@ class Place(BaseModel):
         return cls.repository
 
     @classmethod
-    def create(cls, title, description, price, latitude, longitude, owner_id):
-        place = cls(title, description, price, latitude, longitude, owner_id)
+    def create(
+        cls,
+        title,
+        description,
+        price,
+        latitude,
+        longitude,
+        owner=None,
+        owner_id=None,
+    ):
+        if owner is not None and hasattr(owner, "id"):
+            place = cls(
+                title=title,
+                description=description,
+                price=price,
+                latitude=latitude,
+                longitude=longitude,
+                owner=owner,
+            )
+        else:
+            resolved_owner_id = owner_id if owner_id is not None else owner
+            place = cls(
+                title=title,
+                description=description,
+                price=price,
+                latitude=latitude,
+                longitude=longitude,
+                owner_id=resolved_owner_id,
+            )
+
         cls._repo().add(place)
         return place
 
@@ -118,6 +164,7 @@ class Place(BaseModel):
                 "latitude": float(self.latitude),
                 "longitude": float(self.longitude),
                 "owner_id": self.owner_id,
+                "amenities": [amenity.id for amenity in self.amenities],
             }
         )
         return data

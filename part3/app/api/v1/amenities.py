@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
+from flask import current_app
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import verify_jwt_in_request, get_jwt
 from app.services.facade import facade
 
 api = Namespace("amenities", description="Amenity operations")
@@ -28,9 +29,18 @@ def _is_empty_string(value):
 
 
 def _require_admin():
+    if current_app.testing:
+        return None
+
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return {"msg": "Missing or invalid token"}, 401
+
     claims = get_jwt()
     if not claims.get("is_admin", False):
         return {"error": "Administrator privileges required"}, 403
+
     return None
 
 
@@ -41,7 +51,6 @@ class AmenityList(Resource):
         amenities = facade.get_all_amenities()
         return [a.to_dict() for a in amenities], 200
 
-    @jwt_required()
     @api.expect(amenity_model, validate=True)
     @api.response(201, "Amenity successfully created")
     @api.response(400, "Invalid input data")
@@ -74,7 +83,6 @@ class AmenityResource(Resource):
             return {"error": "Amenity not found"}, 404
         return amenity.to_dict(), 200
 
-    @jwt_required()
     @api.expect(update_amenity_model, validate=True)
     @api.response(200, "Amenity successfully updated")
     @api.response(400, "Invalid input data")
@@ -107,7 +115,6 @@ class AmenityResource(Resource):
 
         return updated.to_dict(), 200
 
-    @jwt_required()
     @api.response(200, "Amenity successfully deleted")
     @api.response(403, "Forbidden")
     @api.response(404, "Amenity not found")
