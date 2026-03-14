@@ -56,7 +56,9 @@ class UsersList(Resource):
         if not _is_valid_email(user_data.get("email")):
             return {"error": "invalid email format"}, 400
 
-        password_missing = "password" not in user_data or _is_empty_string(user_data.get("password"))
+        password_missing = "password" not in user_data or _is_empty_string(
+            user_data.get("password")
+        )
         if password_missing:
             user_data["password"] = "123456"
 
