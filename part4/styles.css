@@ -98,13 +98,6 @@ main {
   outline-offset: 2px;
 }
 
-footer {
-  background-color: #1e3a5f;
-  color: #ffffff;
-  text-align: center;
-  padding: 1rem;
-  margin-top: 2rem;
-}
 .place-details {
   background-color: #ffffff;
   margin: 20px;
@@ -135,6 +128,12 @@ footer {
   margin-bottom: 1rem;
 }
 
+#reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .review-card {
   background-color: #ffffff;
   color: #333;
@@ -149,6 +148,71 @@ footer {
   margin-bottom: 10px;
 }
 
+.review-card p {
+  margin-bottom: 8px;
+}
+
 #add-review {
+  margin-top: 2rem;
+}
+
+#add-review .details-button {
+  border: none;
+}
+
+form {
+  background-color: #ffffff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+form h2 {
+  color: #1e3a5f;
+  margin-bottom: 1rem;
+}
+
+form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+form input,
+form textarea,
+form select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+form button {
+  background-color: #1e3a5f;
+  color: #ffffff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+form button:hover {
+  background-color: #16324f;
+}
+
+footer {
+  background-color: #1e3a5f;
+  color: #ffffff;
+  text-align: center;
+  padding: 1rem;
   margin-top: 2rem;
 }
