@@ -164,7 +164,7 @@ class Place(BaseModel):
                 "latitude": float(self.latitude),
                 "longitude": float(self.longitude),
                 "owner_id": self.owner_id,
-                "amenities": [amenity.id for amenity in self.amenities],
+                "amenities": [amenity.to_dict() for amenity in self.amenities]
             }
         )
         return data
