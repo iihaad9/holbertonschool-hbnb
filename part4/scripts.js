@@ -123,7 +123,11 @@ function fetchPlaceDetails (placeId) {
       return response.json();
     })
     .then(place => {
+      console.log('PLACE:', place);
+      console.log('AMENITIES:', place.amenities);
+
       displayPlaceDetails(place);
+      displayAmenities(place.amenities);
     })
     .catch(error => {
       console.error('Error fetching place details:', error);
@@ -156,14 +160,35 @@ function displayPlaceDetails (place) {
   `;
 }
 
-function displayPlaceError (message) {
-  const container = document.getElementById('place-details');
+function displayAmenities (amenities) {
+  const container = document.getElementById('amenities-list');
 
   if (!container) {
+    console.log('amenities-list not found');
     return;
   }
 
-  container.innerHTML = `<p>${message}</p>`;
+  if (!Array.isArray(amenities) || amenities.length === 0) {
+    container.innerHTML = '<p>No amenities available.</p>';
+    return;
+  }
+
+  container.innerHTML = amenities
+    .map(amenity => `<p>${amenity.name || amenity.id || 'Unknown amenity'}</p>`)
+    .join('');
+}
+
+function displayPlaceError (message) {
+  const container = document.getElementById('place-details');
+  const amenitiesContainer = document.getElementById('amenities-list');
+
+  if (container) {
+    container.innerHTML = `<p>${message}</p>`;
+  }
+
+  if (amenitiesContainer) {
+    amenitiesContainer.innerHTML = '';
+  }
 }
 
 function fetchPlaceReviews (placeId) {
@@ -236,11 +261,11 @@ function updateAuthButton () {
     authBtn.textContent = 'Logout';
     authBtn.href = '#';
 
-    authBtn.addEventListener('click', (e) => {
+    authBtn.onclick = function (e) {
       e.preventDefault();
       deleteCookie('token');
       window.location.href = 'index.html';
-    });
+    };
   } else {
     authBtn.textContent = 'Login';
     authBtn.href = 'login.html';
