@@ -293,3 +293,61 @@ function getCookie (name) {
 function deleteCookie (name) {
   document.cookie = `${name}=; Max-Age=0; path=/`;
 }
+/* ============================= */
+/* Add Review Page               */
+/* ============================= */
+if (document.getElementById('review-form')) {
+  initializeAddReviewPage();
+}
+function initializeAddReviewPage () {
+  const token = getCookie('token');
+
+  if (!token) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const placeId = getPlaceIdFromURL();
+
+  const reviewForm = document.getElementById('review-form');
+
+  reviewForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const reviewText = document.getElementById('review').value.trim();
+    const rating = document.getElementById('rating').value;
+
+    if (!reviewText || !rating) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    await submitReview(token, placeId, reviewText, rating);
+  });
+}
+async function submitReview (token, placeId, reviewText, rating) {
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/v1/reviews/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        text: reviewText,
+        rating: parseInt(rating),
+        place_id: placeId
+      })
+    });
+
+    if (response.ok) {
+      alert('Review submitted successfully!');
+      document.getElementById('review-form').reset();
+    } else {
+      alert('Failed to submit review');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error submitting review');
+  }
+}
