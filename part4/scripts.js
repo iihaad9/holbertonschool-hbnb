@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('place-details')) {
     initializePlacePage();
   }
+  if (document.getElementById('review-form')) {
+  initializeAddReviewPage();
+}
 });
 
 /* ============================= */
@@ -296,9 +299,6 @@ function deleteCookie (name) {
 /* ============================= */
 /* Add Review Page               */
 /* ============================= */
-if (document.getElementById('review-form')) {
-  initializeAddReviewPage();
-}
 function initializeAddReviewPage () {
   const token = getCookie('token');
 
@@ -325,6 +325,7 @@ function initializeAddReviewPage () {
     await submitReview(token, placeId, reviewText, rating);
   });
 }
+
 async function submitReview (token, placeId, reviewText, rating) {
   try {
     const response = await fetch('http://127.0.0.1:5000/api/v1/reviews/', {
