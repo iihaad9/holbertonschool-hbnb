@@ -15,28 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================= */
-/* Fetch Places                  */
+/* Places List Page              */
 /* ============================= */
 
 function fetchPlaces () {
   fetch('http://127.0.0.1:5000/api/v1/places/')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch places');
-      }
-      return response.json();
-    })
-    .then(data => {
-      displayPlaces(data);
-    })
-    .catch(error => {
-      console.error('Error fetching places:', error);
-    });
+    .then(response => response.json())
+    .then(data => displayPlaces(data))
+    .catch(error => console.error('Error fetching places:', error));
 }
-
-/* ============================= */
-/* Display Places                */
-/* ============================= */
 
 function displayPlaces (places) {
   const container = document.getElementById('places-list');
@@ -51,29 +38,18 @@ function displayPlaces (places) {
     const card = document.createElement('article');
     card.className = 'place-card';
 
-    const title = document.createElement('h2');
-    title.textContent = place.title || 'Untitled Place';
-
-    const price = document.createElement('p');
-    price.textContent = place.price !== undefined
-      ? `Price per night: $${place.price}`
-      : 'Price per night: N/A';
-
-    const location = document.createElement('p');
-    location.textContent =
-      place.latitude !== undefined && place.longitude !== undefined
-        ? `Location: ${place.latitude}, ${place.longitude}`
-        : 'Location: N/A';
-
-    const button = document.createElement('a');
-    button.className = 'details-button';
-    button.href = `place.html?id=${encodeURIComponent(place.id)}`;
-    button.textContent = 'View Details';
-
-    card.appendChild(title);
-    card.appendChild(price);
-    card.appendChild(location);
-    card.appendChild(button);
+    card.innerHTML = `
+      <h2>${place.title || 'Untitled Place'}</h2>
+      <p>Price per night: $${place.price ?? 'N/A'}</p>
+      <p>Location: ${
+        place.latitude !== undefined && place.longitude !== undefined
+          ? `${place.latitude}, ${place.longitude}`
+          : 'N/A'
+      }</p>
+      <a class="details-button" href="place.html?id=${encodeURIComponent(place.id)}">
+        View Details
+      </a>
+    `;
 
     container.appendChild(card);
   });
@@ -104,30 +80,25 @@ function getPlaceIdFromURL () {
 }
 
 function toggleAddReviewSection (token, placeId) {
-  const addReviewSection = document.getElementById('add-review');
-  const addReviewLink = document.getElementById('add-review-link');
+  const section = document.getElementById('add-review');
+  const link = document.getElementById('add-review-link');
 
-  if (!addReviewSection || !addReviewLink) {
+  if (!section || !link) {
     return;
   }
 
-  if (token && placeId) {
-    addReviewSection.style.display = 'block';
-    addReviewLink.href = `add_review.html?id=${encodeURIComponent(placeId)}`;
+  if (token) {
+    section.style.display = 'block';
+    link.href = `add_review.html?id=${encodeURIComponent(placeId)}`;
   } else {
-    addReviewSection.style.display = 'none';
-    addReviewLink.href = '#';
+    section.style.display = 'none';
+    link.href = '#';
   }
 }
 
 function fetchPlaceDetails (placeId) {
   fetch(`http://127.0.0.1:5000/api/v1/places/${encodeURIComponent(placeId)}`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch place details');
-      }
-      return response.json();
-    })
+    .then(response => response.json())
     .then(place => {
       displayPlaceDetails(place);
       displayAmenities(place.amenities);
@@ -145,21 +116,28 @@ function displayPlaceDetails (place) {
     return;
   }
 
-  const title = place.title || 'Place Details';
-  const price = place.price !== undefined ? place.price : 'N/A';
-  const description = place.description || 'N/A';
-  const host = place.owner_id || 'N/A';
-  const location =
-    place.latitude !== undefined && place.longitude !== undefined
-      ? `${place.latitude}, ${place.longitude}`
-      : 'N/A';
-
   container.innerHTML = `
-    <h1>${title}</h1>
-    <div class="place-info"><strong>Host:</strong> ${host}</div>
-    <div class="place-info"><strong>Price per night:</strong> $${price}</div>
-    <div class="place-info"><strong>Description:</strong> ${description}</div>
-    <div class="place-info"><strong>Location:</strong> ${location}</div>
+    <h1>${place.title || 'Place Details'}</h1>
+
+    <div class="place-info">
+      <strong>Host:</strong> ${place.owner_id || 'N/A'}
+    </div>
+
+    <div class="place-info">
+      <strong>Price per night:</strong> $${place.price ?? 'N/A'}
+    </div>
+
+    <div class="place-info">
+      <strong>Description:</strong> ${place.description || 'N/A'}
+    </div>
+
+    <div class="place-info">
+      <strong>Location:</strong> ${
+        place.latitude !== undefined && place.longitude !== undefined
+          ? `${place.latitude}, ${place.longitude}`
+          : 'N/A'
+      }
+    </div>
   `;
 }
 
@@ -178,10 +156,10 @@ function displayAmenities (amenities) {
   container.innerHTML = '';
 
   amenities.forEach(amenity => {
+    const name = amenity.name || amenity.id || 'Unknown amenity';
+
     const item = document.createElement('div');
     item.className = 'amenity';
-
-    const name = amenity.name || amenity.id || 'Unknown amenity';
 
     const icon = document.createElement('img');
     icon.className = 'amenity-icon';
@@ -193,26 +171,27 @@ function displayAmenities (amenities) {
 
     item.appendChild(icon);
     item.appendChild(text);
+
     container.appendChild(item);
   });
 }
 
 function getAmenityIcon (name) {
-  const amenityName = name.toLowerCase();
+  const value = name.toLowerCase();
 
-  if (amenityName.includes('wifi') || amenityName.includes('wi-fi')) {
+  if (value.includes('wifi') || value.includes('wi-fi')) {
     return 'images/wifi.png';
   }
 
-  if (amenityName.includes('pool')) {
+  if (value.includes('pool')) {
     return 'images/pool.png';
   }
 
-  if (amenityName.includes('parking')) {
+  if (value.includes('parking')) {
     return 'images/parking.png';
   }
 
-  if (amenityName.includes('pet')) {
+  if (value.includes('pet')) {
     return 'images/pets.png';
   }
 
@@ -220,11 +199,11 @@ function getAmenityIcon (name) {
 }
 
 function displayPlaceError (message) {
-  const container = document.getElementById('place-details');
+  const detailsContainer = document.getElementById('place-details');
   const amenitiesContainer = document.getElementById('amenities-list');
 
-  if (container) {
-    container.innerHTML = `<p>${message}</p>`;
+  if (detailsContainer) {
+    detailsContainer.innerHTML = `<p>${message}</p>`;
   }
 
   if (amenitiesContainer) {
@@ -238,12 +217,7 @@ function displayPlaceError (message) {
 
 function fetchPlaceReviews (placeId) {
   fetch('http://127.0.0.1:5000/api/v1/reviews/')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
-      }
-      return response.json();
-    })
+    .then(response => response.json())
     .then(reviews => {
       const filteredReviews = reviews.filter(review => review.place_id === placeId);
       displayReviews(filteredReviews);
@@ -272,18 +246,11 @@ function displayReviews (reviews) {
     const card = document.createElement('article');
     card.className = 'review-card';
 
-    const user = document.createElement('h3');
-    user.textContent = review.user_id || 'Anonymous';
-
-    const comment = document.createElement('p');
-    comment.textContent = review.text || 'No comment';
-
-    const rating = document.createElement('p');
-    rating.textContent = `Rating: ${review.rating !== undefined ? review.rating : 'N/A'}`;
-
-    card.appendChild(user);
-    card.appendChild(comment);
-    card.appendChild(rating);
+    card.innerHTML = `
+      <h3>${review.user_id || 'Anonymous'}</h3>
+      <p>${review.text || 'No comment'}</p>
+      <p>Rating: ${review.rating ?? 'N/A'}</p>
+    `;
 
     container.appendChild(card);
   });
@@ -297,7 +264,7 @@ function initializeAddReviewPage () {
   const token = getCookie('token');
 
   if (!token) {
-    window.location.href = 'index.html';
+    window.location.href = 'login.html';
     return;
   }
 
@@ -309,10 +276,14 @@ function initializeAddReviewPage () {
     return;
   }
 
-  const reviewForm = document.getElementById('review-form');
+  const form = document.getElementById('review-form');
 
-  reviewForm.addEventListener('submit', async e => {
-    e.preventDefault();
+  if (!form) {
+    return;
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
 
     const reviewText = document.getElementById('review').value.trim();
     const rating = document.getElementById('rating').value;
@@ -337,18 +308,22 @@ async function submitReview (token, placeId, reviewText, rating) {
       body: JSON.stringify({
         text: reviewText,
         rating: parseInt(rating),
+        user_id: '1',
         place_id: placeId
       })
     });
+
+    const data = await response.json();
 
     if (response.ok) {
       alert('Review submitted successfully!');
       window.location.href = `place.html?id=${encodeURIComponent(placeId)}`;
     } else {
-      alert('Failed to submit review');
+      console.log('Review error:', data);
+      alert(data.error || data.message || 'Failed to submit review');
     }
   } catch (error) {
-    console.error(error);
+    console.error('Error submitting review:', error);
     alert('Error submitting review');
   }
 }
@@ -370,8 +345,8 @@ function updateAuthButton () {
     authBtn.textContent = 'Logout';
     authBtn.href = '#';
 
-    authBtn.onclick = function (e) {
-      e.preventDefault();
+    authBtn.onclick = function (event) {
+      event.preventDefault();
       deleteCookie('token');
       window.location.href = 'index.html';
     };
@@ -392,11 +367,15 @@ function getCookie (name) {
     const [key, value] = cookie.trim().split('=');
 
     if (key === name) {
-      return value;
+      return decodeURIComponent(value);
     }
   }
 
   return null;
+}
+
+function setCookie (name, value) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/`;
 }
 
 function deleteCookie (name) {
