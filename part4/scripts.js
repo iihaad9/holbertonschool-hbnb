@@ -8,9 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('place-details')) {
     initializePlacePage();
   }
+
   if (document.getElementById('review-form')) {
-  initializeAddReviewPage();
-}
+    initializeAddReviewPage();
+  }
 });
 
 /* ============================= */
@@ -66,7 +67,7 @@ function displayPlaces (places) {
 
     const button = document.createElement('a');
     button.className = 'details-button';
-    button.href = `place.html?id=${place.id}`;
+    button.href = `place.html?id=${encodeURIComponent(place.id)}`;
     button.textContent = 'View Details';
 
     card.appendChild(title);
@@ -91,6 +92,7 @@ function initializePlacePage () {
   }
 
   const token = getCookie('token');
+
   toggleAddReviewSection(token, placeId);
   fetchPlaceDetails(placeId);
   fetchPlaceReviews(placeId);
@@ -109,16 +111,17 @@ function toggleAddReviewSection (token, placeId) {
     return;
   }
 
-  if (token) {
+  if (token && placeId) {
     addReviewSection.style.display = 'block';
-    addReviewLink.href = `add_review.html?id=${placeId}`;
+    addReviewLink.href = `add_review.html?id=${encodeURIComponent(placeId)}`;
   } else {
     addReviewSection.style.display = 'none';
+    addReviewLink.href = '#';
   }
 }
 
 function fetchPlaceDetails (placeId) {
-  fetch(`http://127.0.0.1:5000/api/v1/places/${placeId}`)
+  fetch(`http://127.0.0.1:5000/api/v1/places/${encodeURIComponent(placeId)}`)
     .then(response => {
       if (!response.ok) {
         throw new Error('Failed to fetch place details');
@@ -126,9 +129,6 @@ function fetchPlaceDetails (placeId) {
       return response.json();
     })
     .then(place => {
-      console.log('PLACE:', place);
-      console.log('AMENITIES:', place.amenities);
-
       displayPlaceDetails(place);
       displayAmenities(place.amenities);
     })
@@ -167,7 +167,6 @@ function displayAmenities (amenities) {
   const container = document.getElementById('amenities-list');
 
   if (!container) {
-    console.log('amenities-list not found');
     return;
   }
 
@@ -176,9 +175,48 @@ function displayAmenities (amenities) {
     return;
   }
 
-  container.innerHTML = amenities
-    .map(amenity => `<p>${amenity.name || amenity.id || 'Unknown amenity'}</p>`)
-    .join('');
+  container.innerHTML = '';
+
+  amenities.forEach(amenity => {
+    const item = document.createElement('div');
+    item.className = 'amenity';
+
+    const name = amenity.name || amenity.id || 'Unknown amenity';
+
+    const icon = document.createElement('img');
+    icon.className = 'amenity-icon';
+    icon.src = getAmenityIcon(name);
+    icon.alt = `${name} icon`;
+
+    const text = document.createElement('span');
+    text.textContent = name;
+
+    item.appendChild(icon);
+    item.appendChild(text);
+    container.appendChild(item);
+  });
+}
+
+function getAmenityIcon (name) {
+  const amenityName = name.toLowerCase();
+
+  if (amenityName.includes('wifi') || amenityName.includes('wi-fi')) {
+    return 'images/wifi.png';
+  }
+
+  if (amenityName.includes('pool')) {
+    return 'images/pool.png';
+  }
+
+  if (amenityName.includes('parking')) {
+    return 'images/parking.png';
+  }
+
+  if (amenityName.includes('pet')) {
+    return 'images/pets.png';
+  }
+
+  return 'images/amenity.png';
 }
 
 function displayPlaceError (message) {
@@ -193,6 +231,10 @@ function displayPlaceError (message) {
     amenitiesContainer.innerHTML = '';
   }
 }
+
+/* ============================= */
+/* Reviews                       */
+/* ============================= */
 
 function fetchPlaceReviews (placeId) {
   fetch('http://127.0.0.1:5000/api/v1/reviews/')
@@ -248,6 +290,70 @@ function displayReviews (reviews) {
 }
 
 /* ============================= */
+/* Add Review Page               */
+/* ============================= */
+
+function initializeAddReviewPage () {
+  const token = getCookie('token');
+
+  if (!token) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const placeId = getPlaceIdFromURL();
+
+  if (!placeId) {
+    alert('Place not found.');
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const reviewForm = document.getElementById('review-form');
+
+  reviewForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const reviewText = document.getElementById('review').value.trim();
+    const rating = document.getElementById('rating').value;
+
+    if (!reviewText || !rating) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    await submitReview(token, placeId, reviewText, rating);
+  });
+}
+
+async function submitReview (token, placeId, reviewText, rating) {
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/v1/reviews/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        text: reviewText,
+        rating: parseInt(rating),
+        place_id: placeId
+      })
+    });
+
+    if (response.ok) {
+      alert('Review submitted successfully!');
+      window.location.href = `place.html?id=${encodeURIComponent(placeId)}`;
+    } else {
+      alert('Failed to submit review');
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error submitting review');
+  }
+}
+
+/* ============================= */
 /* Auth Button Logic             */
 /* ============================= */
 
@@ -295,60 +401,4 @@ function getCookie (name) {
 
 function deleteCookie (name) {
   document.cookie = `${name}=; Max-Age=0; path=/`;
-}
-/* ============================= */
-/* Add Review Page               */
-/* ============================= */
-function initializeAddReviewPage () {
-  const token = getCookie('token');
-
-  if (!token) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  const placeId = getPlaceIdFromURL();
-
-  const reviewForm = document.getElementById('review-form');
-
-  reviewForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const reviewText = document.getElementById('review').value.trim();
-    const rating = document.getElementById('rating').value;
-
-    if (!reviewText || !rating) {
-      alert('Please fill all fields');
-      return;
-    }
-
-    await submitReview(token, placeId, reviewText, rating);
-  });
-}
-
-async function submitReview (token, placeId, reviewText, rating) {
-  try {
-    const response = await fetch('http://127.0.0.1:5000/api/v1/reviews/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        text: reviewText,
-        rating: parseInt(rating),
-        place_id: placeId
-      })
-    });
-
-    if (response.ok) {
-      alert('Review submitted successfully!');
-      document.getElementById('review-form').reset();
-    } else {
-      alert('Failed to submit review');
-    }
-  } catch (error) {
-    console.error(error);
-    alert('Error submitting review');
-  }
 }

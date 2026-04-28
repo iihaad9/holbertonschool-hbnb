@@ -212,3 +212,49 @@ footer {
   padding: 1rem;
   margin-top: 2rem;
 }
+
+.place-amenities {
+  background-color: #ffffff;
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+}
+
+.place-amenities h2 {
+  color: #1e3a5f;
+  margin-bottom: 1rem;
+}
+
+#amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.amenity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f9fbfd;
+  color: #333;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+.amenity-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.place-details p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.place-details strong {
+  color: #1e3a5f;
+}
