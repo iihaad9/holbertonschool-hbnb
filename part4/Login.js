@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       let data = {};
+
       try {
         data = await response.json();
       } catch {
@@ -43,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         const token = data.token || data.access_token || data.access || data.jwt;
+        const userId = data.user_id;
 
         if (!token) {
           alert("Login succeeded, but no token was returned.");
@@ -50,7 +52,17 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        if (!userId) {
+          alert("Login succeeded, but no user_id was returned.");
+          console.log("Returned data:", data);
+          return;
+        }
+
         setCookie("token", token, 1);
+        setCookie("user_id", userId, 1);
+
+        console.log("Saved cookies:", document.cookie);
+
         window.location.href = "index.html";
       } else {
         alert(data.message || data.error || "Invalid email or password");
@@ -75,5 +87,5 @@ function setCookie(name, value, days) {
     expires = "; expires=" + date.toUTCString();
   }
 
-  document.cookie = `${name}=${value}${expires}; path=/`;
+  document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/`;
 }

@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   updateAuthButton();
 
+  if (document.getElementById('login-form')) {
+    initializeLoginPage();
+  }
+
   if (document.getElementById('places-list')) {
     fetchPlaces();
   }
@@ -13,6 +17,53 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAddReviewPage();
   }
 });
+
+/* ============================= */
+/* Login Page                    */
+/* ============================= */
+
+function initializeLoginPage () {
+  const form = document.getElementById('login-form');
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      alert('Please enter email and password');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCookie('token', data.access_token);
+        setCookie('user_id', data.user_id);
+
+        window.location.href = 'index.html';
+      } else {
+        alert(data.error || data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Error logging in');
+    }
+  });
+}
 
 /* ============================= */
 /* Places List Page              */
@@ -298,6 +349,17 @@ function initializeAddReviewPage () {
 }
 
 async function submitReview (token, placeId, reviewText, rating) {
+  const userId = getCookie('user_id') || getUserIdFromToken(token);
+
+  console.log('TOKEN:', token);
+  console.log('USER ID SENT:', userId);
+  console.log('PLACE ID SENT:', placeId);
+
+  if (!userId || userId === 'undefined' || userId === 'null') {
+    alert('User ID not found.');
+    return;
+  }
+
   try {
     const response = await fetch('http://127.0.0.1:5000/api/v1/reviews/', {
       method: 'POST',
@@ -308,12 +370,14 @@ async function submitReview (token, placeId, reviewText, rating) {
       body: JSON.stringify({
         text: reviewText,
         rating: parseInt(rating),
-        user_id: '1',
+        user_id: userId,
         place_id: placeId
       })
     });
 
     const data = await response.json();
+
+    console.log('REVIEW RESPONSE:', data);
 
     if (response.ok) {
       alert('Review submitted successfully!');
@@ -322,6 +386,7 @@ async function submitReview (token, placeId, reviewText, rating) {
       console.log('Review error:', data);
       alert(data.error || data.message || 'Failed to submit review');
     }
+
   } catch (error) {
     console.error('Error submitting review:', error);
     alert('Error submitting review');
@@ -347,7 +412,10 @@ function updateAuthButton () {
 
     authBtn.onclick = function (event) {
       event.preventDefault();
+
       deleteCookie('token');
+      deleteCookie('user_id');
+
       window.location.href = 'index.html';
     };
   } else {
